@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<document>
+    <type>
+        <name>Filter Test</name>
+        <filters>
+            <filter>
+                <name>Brightness</name>
+            </filter>
+            <filter>
+                <name>Exposure</name>
+            </filter>
+            <filter>
+                <name>Contrast</name>
+            </filter>
+            <filter>
+                <name>Saturation</name>
+            </filter>
+            <filter>
+                <name>Hue</name>
+            </filter>
+            <filter>
+                <name>Gamma</name>
+            </filter>
+            <filter>
+                <name>Sepia</name>
+            </filter>
+            <filter>
+                <name>Gray Scale</name>
+            </filter>
+            <filter>
+                <name>Invert Color</name>
+            </filter>
+            <filter>
+                <name>RGB</name>
+            </filter>
+            <filter>
+                <name>Monochrome</name>
+            </filter>
+            <filter>
+                <name>Opacity</name>
+            </filter>
+            <filter>
+                <name>Luminance Threshold</name>
+            </filter>
+            <filter>
+                <name>Halftone</name>
+            </filter>
+            <filter>
+                <name>Tone Curve</name>
+            </filter>
+            <filter>
+                <name>Gaussian Blur</name>
+            </filter>
+            <filter>
+                <name>Selective Gaussian Blur</name>
+            </filter>
+            <filter>
+                <name>TiltShift</name>
+            </filter>
+        </filters>
+    </type>
+</document>
