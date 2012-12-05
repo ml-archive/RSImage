@@ -18,7 +18,7 @@
                 android:name=".StaticFilterTestActivity"
                 android:label="@string/app_name" />
         <activity
-                android:name=".RGBStaticFilterTestActivity"
+                android:name=".LiveFilterTestActivity"
                 android:label="@string/app_name" />
     </application>
     <uses-permission android:name="android.permission.CAMERA" />
