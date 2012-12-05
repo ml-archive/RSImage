@@ -20,6 +20,7 @@ import android.content.res.Resources;
 import android.renderscript.Allocation;
 import android.renderscript.Float2;
 import android.renderscript.RenderScript;
+import android.renderscript.Script;
 import com.caguilar.android.filters.R;
 
 /**
@@ -63,11 +64,11 @@ public class TiltShiftGaussianBlurFilter extends GaussianBlurFilter {
     }
 
     @Override
-    public void forEach_root(Allocation mInAllocation, Allocation mOutAllocation) {
-        super.forEach_root(mInAllocation, mOutAllocation);
+    public void invoke_filter(Script script,Allocation mInAllocation, Allocation mOutAllocation) {
+        super.invoke_filter(script, mInAllocation, mOutAllocation);
         mScript.set_blurTexture(mOutAllocation);
         mScript.set_sharpTexture(mInAllocation);
-        mScript.forEach_root(mInAllocation, mOutAllocation);
+        mScript.invoke_filter(mScript,mInAllocation, mOutAllocation);
     }
 
     public void set_topFocusLevel(float bottomLevel){
