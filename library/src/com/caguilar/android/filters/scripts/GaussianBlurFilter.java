@@ -21,6 +21,7 @@ import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.Float2;
 import android.renderscript.RenderScript;
+import android.renderscript.Script;
 
 /**
  * Created with IntelliJ IDEA.
@@ -48,15 +49,15 @@ public class GaussianBlurFilter extends ScriptC_convolutionseperablefilter {
     }
 
     @Override
-    public void forEach_root(Allocation mInAllocation, Allocation mOutAllocation) {
+    public void invoke_filter(Script script,Allocation mInAllocation, Allocation mOutAllocation) {
         set_inTexture(mInAllocation);
         set_matrixLenght(9);
         set_XYOffset(new Float2(1 * blurSize, 0));
         set_matrixTexture(kernelAllocation);
-        super.forEach_root(mInAllocation, mOutAllocation);
+        super.invoke_filter(script, mInAllocation, mOutAllocation);
         set_inTexture(mOutAllocation);
         set_XYOffset(new Float2(0, 1 * blurSize));
-        super.forEach_root(mInAllocation, mOutAllocation);
+        super.invoke_filter(script,mInAllocation, mOutAllocation);
     }
 
     public void setBlurSize(float value) {

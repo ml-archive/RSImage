@@ -24,3 +24,7 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
     float4 color = rsUnpackColor8888(*v_in);
     *v_out = rsPackColorTo8888(color.r*opacityValue,color.g*opacityValue,color.b*opacityValue,color.a*opacityValue);
 }
+
+void filter(rs_script script,rs_allocation inAllocation,rs_allocation outAllocation){
+    rsForEach(script, inAllocation, outAllocation, 0, 0);
+}
