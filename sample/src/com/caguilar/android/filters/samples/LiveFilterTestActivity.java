@@ -19,6 +19,7 @@ package com.caguilar.android.filters.samples;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
@@ -32,6 +33,8 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.util.SparseArray;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.TextureView;
 import android.widget.AdapterView;
@@ -311,5 +314,44 @@ public class LiveFilterTestActivity extends Activity
         mCamera.addCallbackBuffer(data);
         mProcessInProgress = true;
         new ProcessPreviewDataTask().execute(data);
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(1,1,1,"Values").setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if(item.getItemId()==1){
+            SeekBar bar = (SeekBar)findViewById(R.id.valueBar);
+            float newI = bar.getProgress();
+            newI = newI- Float.parseFloat(getIntent().getStringExtra("minusValue"));
+            float value = newI/Float.parseFloat(getIntent().getStringExtra("divisionValue"));
+            makeDialog(value+"","Value");
+        }
+        return true;
+    }
+
+    public AlertDialog makeDialog(String message, String title) {
+        if (isFinishing())
+            return null;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(
+                getParent() != null ? getParent() : this);
+        builder.setMessage(message)
+                .setCancelable(true)
+                .setTitle(title)
+                .setPositiveButton(
+                        "OK",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                                dialog.cancel();
+                            }
+                        });
+        AlertDialog alert = builder.create();
+        alert.show();
+        return alert;
     }
 }
