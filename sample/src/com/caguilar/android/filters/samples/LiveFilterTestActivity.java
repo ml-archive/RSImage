@@ -1,60 +1,113 @@
 /*
-   Copyright 2012 Cesar Aguilar
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
+ * Copyright (C) 2012 Cesar Aguilar
+ * Copyright (C) 2012 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package com.caguilar.android.filters.samples;
+
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.renderscript.Allocation;
-import android.renderscript.RenderScript;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.os.Handler;
+import android.util.Log;
+import android.util.SparseArray;
+import android.view.View;
 import android.view.TextureView;
-import android.widget.RelativeLayout;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.SeekBar;
+import android.widget.Spinner;
 
 import java.io.IOException;
+import java.lang.InterruptedException;
+import java.lang.Math;
+import java.lang.Thread;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.TreeSet;
 
-public class LiveFilterTestActivity extends Activity implements SeekBar.OnSeekBarChangeListener, TextureView.SurfaceTextureListener, SurfaceTexture.OnFrameAvailableListener {
+import android.renderscript.*;
 
-    TextureView mTextureView;
+/**
+ * Tests for manual verification of the CDD-required camera output formats
+ * for preview callbacks
+ */
+public class LiveFilterTestActivity extends Activity
+        implements TextureView.SurfaceTextureListener, Camera.PreviewCallback, SeekBar.OnSeekBarChangeListener {
+    private TextureView mPreviewView;
+    private SurfaceTexture mPreviewTexture;
+    private int mPreviewTexWidth;
+    private int mPreviewTexHeight;
+    private ImageView mFormatView;
     private Camera mCamera;
+    private Camera.Size mPreviewSize;
+    private Bitmap mCallbackBitmap;
+    private Bitmap mPreCallbackBitmap;
 
-    public int LAYOUT = R.layout.livefiltersample;
-    RenderScript mRS;
-    Resources resources;
+    private static final int STATE_OFF = 0;
+    private static final int STATE_PREVIEW = 1;
+    private static final int STATE_NO_CALLBACKS = 2;
+    private int mState = STATE_OFF;
+    private boolean mProcessInProgress = false;
+    private RenderScript mRS;
+    private RsYuv mFilterYuv;
+    boolean FRONT;
+
     Allocation mInAllocation;
     Allocation mOutAllocation;
+    float mCurrentValue;
+    String mCurrentEffect;
 
-    /**
-     * Called when the activity is first created.
-     */
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(LAYOUT);
+        mCurrentEffect = getIntent().getStringExtra("filter");
+        setTitle(mCurrentEffect);
+        setContentView(R.layout.livefiltersample);
+        mPreviewView = (TextureView) findViewById(R.id.preview_view);
+        mFormatView = (ImageView) findViewById(R.id.format_view);
+        mPreviewView.setSurfaceTextureListener(this);
+        mRS = RenderScript.create(this);
 
-        mTextureView = (TextureView)findViewById(R.id.imageView);
-        mTextureView.setSurfaceTextureListener(this);
+        if(Camera.getNumberOfCameras()>1){
+            findViewById(R.id.flip_button).setVisibility(View.VISIBLE);
+            findViewById(R.id.flip_button).setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if(FRONT){
+                        FRONT = false;
+                        setUpCamera(0);
+                    }else{
+                        FRONT = true;
+                        setUpCamera(1);
+                    }
 
+                }
+            });
+        }
 
         if(findViewById(R.id.valueBar)!=null){
             SeekBar bar = (SeekBar)findViewById(R.id.valueBar);
@@ -65,44 +118,8 @@ public class LiveFilterTestActivity extends Activity implements SeekBar.OnSeekBa
     }
 
     @Override
-    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
-        mCamera = Camera.open();
-
-        Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
-                previewSize.width, previewSize.height);
-        params.addRule(RelativeLayout.CENTER_IN_PARENT,1);
-        mTextureView.setLayoutParams(params);
-        surface.setOnFrameAvailableListener(this);
-
-        try {
-            mCamera.setPreviewTexture(surface);
-        } catch (IOException t) {
-        }
-
-        mCamera.startPreview();
-    }
-
-    @Override
-    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
-        // Ignored, the Camera does all the work for us
-    }
-
-    @Override
-    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
-        mCamera.stopPreview();
-        mCamera.release();
-        return true;
-    }
-
-    @Override
-    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
-        // Called whenever a new frame is available and displayed in the TextureView
-    }
-
-    @Override
     public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
-//        doChange(seekBar);
+        doChange(seekBar);
     }
 
     @Override
@@ -111,160 +128,188 @@ public class LiveFilterTestActivity extends Activity implements SeekBar.OnSeekBa
 
     @Override
     public void onStopTrackingTouch(SeekBar seekBar) {
+        doChange(seekBar);
     }
 
-//    public void doChange(SeekBar seekBar){
-//        String effectName = getIntent().getStringExtra("filter");
-//        ScriptC mScript;
-//
-//        float newI = seekBar.getProgress();
-//        newI = newI- getIntent().getFloatExtra("minusValue", 0.0f);
-//        float value = newI/getIntent().getFloatExtra("divisionValue", 1.0f);
-//
-//        if(effectName.equalsIgnoreCase("basic")){
-//            mScript = new ScriptC_basicfilter(mRS, resources, R.raw.basicfilter);
-//            ((ScriptC_basicfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if(effectName.equalsIgnoreCase("saturation")){
-//            mScript = new ScriptC_saturationfilter(mRS, resources, R.raw.saturationfilter);
-//            ((ScriptC_saturationfilter)mScript).set_saturationValue(value);
-//            ((ScriptC_saturationfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if(effectName.equalsIgnoreCase("contrast")){
-//            mScript = new ScriptC_contrastfilter(mRS, resources, R.raw.contrastfilter);
-//            ((ScriptC_contrastfilter)mScript).set_contrastValue(value);
-//            ((ScriptC_contrastfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if(effectName.equalsIgnoreCase("brightness")){
-//            mScript = new ScriptC_brightnessfilter(mRS, resources, R.raw.brightnessfilter);
-//            ((ScriptC_brightnessfilter)mScript).set_brightnessValue(value);
-//            ((ScriptC_brightnessfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("sepia")) {
-//            mScript = new SepiaFilter(mRS, resources, R.raw.colormatrixfilter);
-//            ((SepiaFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("grayscale")) {
-//            mScript = new ScriptC_grayscalefilter(mRS, resources, R.raw.grayscalefilter);
-//            ((ScriptC_grayscalefilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("halftone")) {
-//            mScript = new HalftoneFilter(mRS, resources, R.raw.halftonefilter);
-//            ((HalftoneFilter)mScript).setInputSize(filteredBitmap.getWidth(), filteredBitmap.getHeight());
-//            ((HalftoneFilter)mScript).set_fractionalWidthOfAPixel(value);
-//            ((HalftoneFilter)mScript).set_inTexture(mInAllocation);
-//            ((HalftoneFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("colorinvert")) {
-//            mScript = new ScriptC_invertcolorfilter(mRS, resources, R.raw.invertcolorfilter);
-//            ((ScriptC_invertcolorfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("hue")) {
-//            mScript = new HueFilter(mRS, resources, R.raw.huefilter);
-//            ((HueFilter)mScript).setHue(value);
-//            ((HueFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("monochrome")) {
-//            mScript = new ScriptC_monochromefilter(mRS, resources, R.raw.monochromefilter);
-//            ((ScriptC_monochromefilter)mScript).set_intensityValue(value);
-//            ((ScriptC_monochromefilter)mScript).set_filterColor(new Float3(0.0f, 0.0f, 1.0f));
-//            ((ScriptC_monochromefilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("exposure")) {
-//            mScript = new ScriptC_exposurefilter(mRS, resources, R.raw.exposurefilter);
-//            ((ScriptC_exposurefilter)mScript).set_exposureValue(value);
-//            ((ScriptC_exposurefilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        } else if (effectName.equalsIgnoreCase("gamma")) {
-//            mScript = new ScriptC_gammafilter(mRS, resources, R.raw.gammafilter);
-//            ((ScriptC_gammafilter)mScript).set_gammaValue(value);
-//            ((ScriptC_gammafilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        } else if(effectName.equalsIgnoreCase("rgb")){
-//            mScript = new ScriptC_rgbfilter(mRS, resources, R.raw.rgbfilter);
-//            ((ScriptC_rgbfilter)mScript).set_redValue(1.0f);
-//            ((ScriptC_rgbfilter)mScript).set_greenValue(value);
-//            ((ScriptC_rgbfilter)mScript).set_blueValue(1.0f);
-//            ((ScriptC_rgbfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("opacity")) {
-//            mScript = new ScriptC_opacityfilter(mRS, resources, R.raw.opacityfilter);
-//            ((ScriptC_opacityfilter)mScript).set_opacityValue(value);
-//            ((ScriptC_opacityfilter) mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("luminancethreshold")) {
-//            mScript = new ScriptC_luminancethresholdfilter(mRS, resources, R.raw.luminancethresholdfilter);
-//            ((ScriptC_luminancethresholdfilter)mScript).set_thresholdValue(value);
-//            ((ScriptC_luminancethresholdfilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }else if (effectName.equalsIgnoreCase("tonecurve")) {
-//            mScript = new ToneCurveFilter(mRS, resources, R.raw.tonecurvefilter);
-//            ArrayList<PointF> blueCurvePF = new ArrayList<PointF>();
-//            blueCurvePF.add(new PointF(0.0f, 0.0f));
-//            blueCurvePF.add(new PointF(0.5f, value));
-//            blueCurvePF.add(new PointF(1.0f, 0.75f));
-//            ((ToneCurveFilter)mScript).setBlueControlPoints(blueCurvePF);
-//            ((ToneCurveFilter)mScript).updateToneCurveTexture();
-//            ((ToneCurveFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        } else if (effectName.equalsIgnoreCase("gaussianblur")) {
-//            mScript = new GaussianBlurFilter(mRS, resources, R.raw.convolutionseperablefilter);
-//            ((GaussianBlurFilter)mScript).setBlurSize(value);
-//            ((GaussianBlurFilter)mScript).set_imageHeight(originalBitmap.getHeight());
-//            ((GaussianBlurFilter)mScript).set_imageWidth(originalBitmap.getWidth());
-//            ((GaussianBlurFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        } else if (effectName.equalsIgnoreCase("gaussianselectiveblur")) {
-//            mScript = new SelectiveGaussianBlurFilter(mRS, resources, R.raw.convolutionseperablefilter);
-//            ((SelectiveGaussianBlurFilter)mScript).set_imageHeight(originalBitmap.getHeight());
-//            ((SelectiveGaussianBlurFilter)mScript).set_imageWidth(originalBitmap.getWidth());
-//            ((SelectiveGaussianBlurFilter)mScript).set_excludeCircleRadius(value);
-//            ((SelectiveGaussianBlurFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        } else if (effectName.equalsIgnoreCase("tiltshift")) {
-//            mScript = new TiltShiftGaussianBlurFilter(mRS, resources, R.raw.convolutionseperablefilter);
-//            ((TiltShiftGaussianBlurFilter)mScript).set_imageHeight(originalBitmap.getHeight());
-//            ((TiltShiftGaussianBlurFilter)mScript).set_imageWidth(originalBitmap.getWidth());
-//            ((TiltShiftGaussianBlurFilter)mScript).set_topFocusLevel(value-0.1f);
-//            ((TiltShiftGaussianBlurFilter)mScript).set_bottomFocusLevel(value+0.1f);
-//            ((TiltShiftGaussianBlurFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        } else if (effectName.equalsIgnoreCase("tiltshiftvertical")) {
-//            mScript = new TiltShiftGaussianBlurFilter(mRS, resources, R.raw.convolutionseperablefilter);
-//            ((TiltShiftGaussianBlurFilter)mScript).set_imageHeight(originalBitmap.getHeight());
-//            ((TiltShiftGaussianBlurFilter)mScript).set_imageWidth(originalBitmap.getWidth());
-//            ((TiltShiftGaussianBlurFilter)mScript).set_topFocusLevel(value-0.1f);
-//            ((TiltShiftGaussianBlurFilter)mScript).set_bottomFocusLevel(value+0.1f);
-//            ((TiltShiftGaussianBlurFilter)mScript).set_direction(0);
-//            ((TiltShiftGaussianBlurFilter)mScript).forEach_root(mInAllocation, mOutAllocation);
-//        }
-//        mOutAllocation.copyTo(filteredBitmap);
-//        imageView.setImageBitmap(filteredBitmap);
-//    }
-
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(1,1,1,"Values").setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_ALWAYS);
-        return super.onCreateOptionsMenu(menu);
+    public void doChange(SeekBar seekBar){
+        float newI = seekBar.getProgress();
+        newI = newI- getIntent().getFloatExtra("minusValue", 0.0f);
+        mCurrentValue = newI/getIntent().getFloatExtra("divisionValue", 1.0f);
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if(item.getItemId()==1){
-            SeekBar bar = (SeekBar)findViewById(R.id.valueBar);
-            float newI = bar.getProgress();
-            newI = newI- Float.parseFloat(getIntent().getStringExtra("minusValue"));
-            float value = newI/Float.parseFloat(getIntent().getStringExtra("divisionValue"));
-            makeDialog(value+"","Value");
+    public void onResume() {
+        super.onResume();
+        setUpCamera(0);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        shutdownCamera();
+    }
+
+    public void onSurfaceTextureAvailable(SurfaceTexture surface,
+                                          int width, int height) {
+        mPreviewTexture = surface;
+        mPreviewTexWidth = width;
+        mPreviewTexHeight = height;
+        if (mCamera != null) {
+            startPreview();
         }
+    }
+
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+        // Ignored, Camera does all the work for us
+    }
+
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
         return true;
     }
 
-    public AlertDialog makeDialog(String message, String title) {
-        if (isFinishing())
-            return null;
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(
-                getParent() != null ? getParent() : this);
-        builder.setMessage(message)
-                .setCancelable(true)
-                .setTitle(title)
-                .setPositiveButton(
-                        "OK",
-                        new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int id) {
-                                dialog.cancel();
-                            }
-                        });
-        AlertDialog alert = builder.create();
-        alert.show();
-        return alert;
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+        // Invoked every time there's a new Camera preview frame
     }
 
-    @Override
-    public void onFrameAvailable(SurfaceTexture surfaceTexture) {
+    private void setUpCamera(int id) {
+        shutdownCamera();
+        mCamera = Camera.open(id);
+        Camera.Parameters p = mCamera.getParameters();
+        List<Camera.Size> unsortedSizes = p.getSupportedPreviewSizes();
+        class SizeCompare implements Comparator<Camera.Size> {
+            public int compare(Camera.Size lhs, Camera.Size rhs) {
+                if (lhs.width < rhs.width) return -1;
+                if (lhs.width > rhs.width) return 1;
+                if (lhs.height < rhs.height) return -1;
+                if (lhs.height > rhs.height) return 1;
+                return 0;
+            }
+        };
+        SizeCompare s = new SizeCompare();
+        TreeSet<Camera.Size> sortedResolutions = new TreeSet<Camera.Size>(s);
+        sortedResolutions.addAll(unsortedSizes);
+        List<Camera.Size> mPreviewSizes = new ArrayList<Camera.Size>(sortedResolutions);
+        mPreviewSize = mPreviewSizes.get(mPreviewSizes.size() - 1);
+        if (mPreviewTexture != null) {
+            startPreview();
+        }
+    }
 
+    private void shutdownCamera() {
+        if (mCamera != null) {
+            mCamera.setPreviewCallbackWithBuffer(null);
+            mCamera.stopPreview();
+            mCamera.release();
+            mCamera = null;
+            mState = STATE_OFF;
+        }
+    }
+
+    private void startPreview() {
+        if (mState != STATE_OFF) {
+            // Stop for a while to drain callbacks
+            mCamera.setPreviewCallbackWithBuffer(null);
+            mCamera.stopPreview();
+            mState = STATE_OFF;
+            Handler h = new Handler();
+            Runnable mDelayedPreview = new Runnable() {
+                public void run() {
+                    startPreview();
+                }
+            };
+            h.postDelayed(mDelayedPreview, 300);
+            return;
+        }
+        mState = STATE_PREVIEW;
+
+        Matrix transform = new Matrix();
+        float widthRatio = mPreviewSize.width / (float)mPreviewTexWidth;
+        float heightRatio = mPreviewSize.height / (float)mPreviewTexHeight;
+
+        transform.setScale(1, heightRatio/widthRatio);
+        transform.postTranslate(0,
+                mPreviewTexHeight * (1 - heightRatio/widthRatio)/2);
+
+        mPreviewView.setTransform(transform);
+
+        Camera.Parameters p = mCamera.getParameters();
+        p.setPreviewFormat(ImageFormat.NV21);
+        p.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+        mCamera.setParameters(p);
+
+        mCamera.setPreviewCallbackWithBuffer(this);
+        int expectedBytes = mPreviewSize.width * mPreviewSize.height *
+                ImageFormat.getBitsPerPixel(ImageFormat.NV21) / 8;
+        for (int i=0; i < 4; i++) {
+            mCamera.addCallbackBuffer(new byte[expectedBytes]);
+        }
+        try {
+            mCamera.setPreviewTexture(mPreviewTexture);
+            mCamera.startPreview();
+        } catch (IOException ioe) {
+        }
+    }
+
+
+    private class ProcessPreviewDataTask extends AsyncTask<byte[], Void, Boolean> {
+        protected Boolean doInBackground(byte[]... datas) {
+            byte[] data = datas[0];
+            mFilterYuv.execute(data, mPreCallbackBitmap);
+            try{
+                mInAllocation.copyFrom(mPreCallbackBitmap);
+            }catch (Throwable e){
+                mInAllocation = Allocation.createFromBitmap(mRS, mCallbackBitmap,
+                        Allocation.MipmapControl.MIPMAP_NONE,
+                        Allocation.USAGE_SCRIPT);
+                mOutAllocation = Allocation.createTyped(mRS, mInAllocation.getType());
+                mOutAllocation.copyFrom(mPreCallbackBitmap);
+            }
+            FilterSystem.applyFilter(mInAllocation,mOutAllocation,mCurrentValue,mCurrentEffect,mRS,getResources(),mCallbackBitmap);
+            mOutAllocation.copyTo(mCallbackBitmap);
+            mCamera.addCallbackBuffer(data);
+            mProcessInProgress = false;
+            return true;
+        }
+
+        protected void onPostExecute(Boolean result) {
+            mFormatView.invalidate();
+        }
+
+    }
+
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        if (mProcessInProgress || mState != STATE_PREVIEW) {
+            mCamera.addCallbackBuffer(data);
+            return;
+        }
+        if (data == null) {
+            return;
+        }
+        int expectedBytes = mPreviewSize.width * mPreviewSize.height *
+                ImageFormat.getBitsPerPixel(ImageFormat.NV21) / 8;
+        if (expectedBytes != data.length) {
+            mState = STATE_NO_CALLBACKS;
+            mCamera.setPreviewCallbackWithBuffer(null);
+            return;
+        }
+        mProcessInProgress = true;
+        if (mCallbackBitmap == null ||
+                mPreviewSize.width != mCallbackBitmap.getWidth() ||
+                mPreviewSize.height != mCallbackBitmap.getHeight() ) {
+            mCallbackBitmap =
+                    Bitmap.createBitmap(
+                            mPreviewSize.width, mPreviewSize.height,
+                            Bitmap.Config.ARGB_8888);
+            mPreCallbackBitmap =
+                    Bitmap.createBitmap(
+                            mPreviewSize.width, mPreviewSize.height,
+                            Bitmap.Config.ARGB_8888);
+            mFilterYuv = new RsYuv(mRS, getResources(), mPreviewSize.width, mPreviewSize.height);
+            mFormatView.setImageBitmap(mCallbackBitmap);
+        }
+        mFormatView.invalidate();
+        mCamera.addCallbackBuffer(data);
+        mProcessInProgress = true;
+        new ProcessPreviewDataTask().execute(data);
     }
 }

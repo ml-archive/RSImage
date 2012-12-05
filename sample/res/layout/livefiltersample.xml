@@ -5,11 +5,28 @@
         >
 
     <TextureView
-            android:id="@+id/imageView"
+            android:id="@+id/preview_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             />
 
+    <FrameLayout android:layout_width="match_parent"
+                 android:layout_height="match_parent"
+            android:background="#000000"/>
+
+    <ImageView
+            android:id="@+id/format_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            />
+
+    <Button android:id="@+id/flip_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:text="flip"
+            android:visibility="gone"/>
 
     <SeekBar android:id="@+id/valueBar"
              android:layout_width="match_parent"

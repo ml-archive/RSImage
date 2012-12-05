@@ -19,6 +19,8 @@ package com.caguilar.android.filters.samples;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
@@ -27,6 +29,7 @@ import java.util.ArrayList;
 
 public class FiltersActivity extends Activity {
     protected ArrayList<FilterObject> list;
+    boolean staticView = true;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -39,7 +42,13 @@ public class FiltersActivity extends Activity {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
                 FilterObject child = (FilterObject)list.get(position);
-                Intent i = new Intent(FiltersActivity.this, StaticFilterTestActivity.class);
+                Intent i;
+                if(staticView){
+                    i = new Intent(FiltersActivity.this, StaticFilterTestActivity.class);
+                }else{
+                    i = new Intent(FiltersActivity.this, LiveFilterTestActivity.class);
+                }
+
                 i.putExtra("filter",child.getValue());
                 i.putExtra("defaultValue",child.getDefaultValue());
                 i.putExtra("minusValue",child.getMinusValue());
@@ -74,5 +83,22 @@ public class FiltersActivity extends Activity {
             add(new FilterObject("TiltShift Vertical","tiltshiftvertical",30000,60000,-20000,100000));
             add(new FilterObject("Opacity","opacity",100,100,0,100));
         }};
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        if(staticView){
+            menu.add(0,0,0,"Live").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        }else{
+            menu.add(0,0,0,"Static").setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        }
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        staticView = !staticView;
+        invalidateOptionsMenu();
+        return super.onOptionsItemSelected(item);
     }
 }
