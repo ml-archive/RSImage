@@ -21,9 +21,6 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.graphics.Bitmap;
-import android.graphics.Color;
-import android.graphics.ColorMatrix;
-import android.graphics.ColorMatrixColorFilter;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.SurfaceTexture;
@@ -31,30 +28,21 @@ import android.hardware.Camera;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
-import android.util.SparseArray;
+import android.renderscript.Allocation;
+import android.renderscript.RenderScript;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.view.TextureView;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
+import android.view.View;
 import android.widget.ImageView;
 import android.widget.SeekBar;
-import android.widget.Spinner;
+import com.caguilar.android.filters.scripts.Yuv2Rgb;
 
 import java.io.IOException;
-import java.lang.InterruptedException;
-import java.lang.Math;
-import java.lang.Thread;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.TreeSet;
-
-import android.renderscript.*;
-import com.caguilar.android.filters.scripts.ScriptC_yuv2rgb;
-import com.caguilar.android.filters.scripts.Yuv2Rgb;
 
 /**
  * Tests for manual verification of the CDD-required camera output formats
