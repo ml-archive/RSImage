@@ -4,7 +4,6 @@ import android.content.res.Resources;
 import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
-import java.util.Arrays;
 
 /**
  * Created with IntelliJ IDEA.
