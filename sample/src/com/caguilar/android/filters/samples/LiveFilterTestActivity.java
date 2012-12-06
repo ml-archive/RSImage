@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.TreeSet;
 
 import android.renderscript.*;
+import com.caguilar.android.filters.scripts.ScriptC_yuv2rgb;
+import com.caguilar.android.filters.scripts.Yuv2Rgb;
 
 /**
  * Tests for manual verification of the CDD-required camera output formats
@@ -76,11 +78,12 @@ public class LiveFilterTestActivity extends Activity
     private int mState = STATE_OFF;
     private boolean mProcessInProgress = false;
     private RenderScript mRS;
-    private RsYuv mFilterYuv;
+//    private RsYuv mFilterYuv;
     boolean FRONT;
 
     Allocation mInAllocation;
     Allocation mOutAllocation;
+    Yuv2Rgb mScript;
     float mCurrentValue;
     String mCurrentEffect;
 
@@ -257,19 +260,29 @@ public class LiveFilterTestActivity extends Activity
     private class ProcessPreviewDataTask extends AsyncTask<byte[], Void, Boolean> {
         protected Boolean doInBackground(byte[]... datas) {
             byte[] data = datas[0];
-            mFilterYuv.execute(data, mPreCallbackBitmap);
+            //mFilterYuv.execute(data, mPreCallbackBitmap);
             try{
                 mInAllocation.copyFrom(mPreCallbackBitmap);
             }catch (Throwable e){
+                mScript = new Yuv2Rgb(mRS,getResources(),R.raw.yuv2rgb);
                 mInAllocation = Allocation.createFromBitmap(mRS, mCallbackBitmap,
                         Allocation.MipmapControl.MIPMAP_NONE,
                         Allocation.USAGE_SCRIPT);
                 mOutAllocation = Allocation.createTyped(mRS, mInAllocation.getType());
                 mOutAllocation.copyFrom(mPreCallbackBitmap);
             }
+
+            //CONVERT TO RGB
+            mScript.convert(data,mPreCallbackBitmap.getWidth(),mPreCallbackBitmap.getHeight(), mOutAllocation);
+            mOutAllocation.copyTo(mPreCallbackBitmap);
+            mInAllocation.copyFrom(mPreCallbackBitmap);
+
+
             FilterSystem.applyFilter(mInAllocation,mOutAllocation,mCurrentValue,mCurrentEffect,mRS,getResources(),mCallbackBitmap);
             mOutAllocation.copyTo(mCallbackBitmap);
-            mCamera.addCallbackBuffer(data);
+            if(mCamera!=null){
+                mCamera.addCallbackBuffer(data);
+            }
             mProcessInProgress = false;
             return true;
         }
@@ -307,7 +320,7 @@ public class LiveFilterTestActivity extends Activity
                     Bitmap.createBitmap(
                             mPreviewSize.width, mPreviewSize.height,
                             Bitmap.Config.ARGB_8888);
-            mFilterYuv = new RsYuv(mRS, getResources(), mPreviewSize.width, mPreviewSize.height);
+            //mFilterYuv = new RsYuv(mRS, getResources(), mPreviewSize.width, mPreviewSize.height);
             mFormatView.setImageBitmap(mCallbackBitmap);
         }
         mFormatView.invalidate();
