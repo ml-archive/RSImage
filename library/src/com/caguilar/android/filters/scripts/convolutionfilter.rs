@@ -20,11 +20,66 @@
 rs_allocation inTexture;
 rs_allocation matrixTexture;
 
+float* convolutionKernel;
+float  kernelSum;
+uint32_t imageWidth;
+uint32_t imageHeight;
+
+static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel, float sum );
+
 void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, uint32_t y) {
     float4 apixel = rsUnpackColor8888(*v_in);
-    *v_out = rsPackColorTo8888(apixel);
+
+    if( x > 0 && x < imageWidth-1 && y > 0 && y < imageHeight-1 )
+    {
+        uchar4 neighborhood[9] = { *(uchar4* )rsGetElementAt(inTexture, x-1, y-1),
+                                 *(uchar4* )rsGetElementAt(inTexture, x, y-1),
+                                 *(uchar4* )rsGetElementAt(inTexture, x+1, y-1),
+                                 *(uchar4* )rsGetElementAt(inTexture, x-1, y),
+                                 *(uchar4* )rsGetElementAt(inTexture, x, y),
+                                 *(uchar4* )rsGetElementAt(inTexture, x+1, y),
+                                 *(uchar4* )rsGetElementAt(inTexture, x-1, y+1),
+                                 *(uchar4* )rsGetElementAt(inTexture, x, y+1),
+                                 *(uchar4* )rsGetElementAt(inTexture, x+1, y+1)
+                               };
+        
+        *v_out = convolve_3x3k( neighborhood, convolutionKernel, kernelSum );
+       
+    }
+    else
+        *v_out = rsPackColorTo8888(apixel);
 }
 
 void filter(rs_script script,rs_allocation inAllocation,rs_allocation outAllocation){
     rsForEach(script, inAllocation, outAllocation, 0, 0);
+}
+
+static int print = 0;
+static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel, float sum )
+{
+    float4 total = {0.0f,0.0f,0.0f,0.0f};
+
+    float alpha = rsUnpackColor8888(*(neighborhood+4)).a;
+
+    float4 s = { sum, sum, sum, 1};
+    for(int i = 0; i < 9; i++ )
+    {
+        float4 c = rsUnpackColor8888(*(neighborhood+i));
+        float4 k = {*(kernel+i),*(kernel+i),*(kernel+i),1};
+
+        total.rgb += (*(kernel+i)*c).rgb;
+        //total.rgb += (k*c).rgb;
+
+    }
+
+    print++;
+
+    float4 newValue = total/sum;
+
+    newValue = clamp(newValue,0.0f,1.0f);
+
+        if( print < 4 )
+            rsDebug("con: new ", newValue.r, newValue.g, newValue.b, alpha);
+
+    return rsPackColorTo8888( newValue.r, newValue.g, newValue.b, alpha );
 }
