@@ -176,7 +176,7 @@ public class FilterSystem {
             ((ScriptC_polarpixellate)mScript).set_inTexture(mInAllocation);
             ((ScriptC_polarpixellate)mScript).invoke_filter(mScript, mInAllocation, mOutAllocation);
         } else if (effectName.equalsIgnoreCase("emboss")) {
-            mScript = new EmbossFilter(mRS, resources, R.raw.convolutionfilter);
+            mScript = new EmbossFilter(mRS, resources, R.raw.convolutionthreexthreefilter);
             ((EmbossFilter)mScript).set_imageHeight(originalBitmap.getHeight()-1);
             ((EmbossFilter)mScript).set_imageWidth(originalBitmap.getWidth()-1);
             ((EmbossFilter)mScript).setIntensity(value);
