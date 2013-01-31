@@ -54,7 +54,6 @@ void filter(rs_script script,rs_allocation inAllocation,rs_allocation outAllocat
     rsForEach(script, inAllocation, outAllocation, 0, 0);
 }
 
-static int print = 0;
 static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel, float sum )
 {
     float4 total = {0.0f,0.0f,0.0f,0.0f};
@@ -72,14 +71,9 @@ static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel, fl
 
     }
 
-    print++;
-
-    float4 newValue = total/sum;
+    float4 newValue = total;
 
     newValue = clamp(newValue,0.0f,1.0f);
-
-        if( print < 4 )
-            rsDebug("con: new ", newValue.r, newValue.g, newValue.b, alpha);
 
     return rsPackColorTo8888( newValue.r, newValue.g, newValue.b, alpha );
 }
