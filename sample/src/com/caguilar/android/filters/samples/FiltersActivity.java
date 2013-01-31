@@ -82,6 +82,10 @@ public class FiltersActivity extends Activity {
             add(new FilterObject("TiltShift","tiltshift",30000,60000,-20000,100000));
             add(new FilterObject("TiltShift Vertical","tiltshiftvertical",30000,60000,-20000,100000));
             add(new FilterObject("Opacity","opacity",100,100,0,100));
+            add( new FilterObject("Swirl", "swirl",0,0,0,0));
+            add( new FilterObject("Stretch Distortion", "stretchdistortion",0,0,0,0));
+            add( new FilterObject("Polar Pixellate", "polarpixellate",150,200,100,1000));
+            add( new FilterObject("Emboss", "emboss",100,500,0,100));
         }};
     }
 

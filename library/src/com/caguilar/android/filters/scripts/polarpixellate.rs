@@ -19,7 +19,7 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
     normCoord -= normCenter;
 
     float r = length(normCoord); // to polar coords
-    float phi = atan(normCoord.y/normCoord.x); // to polar coords
+    float phi = atan2(normCoord.y,normCoord.x); // to polar coords
 
     r = r - fmod(r, pixelSize.x) + 0.03;
     phi = phi - fmod(phi, pixelSize.y);
@@ -33,12 +33,18 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
     normCoord += normCenter;
 
 
-    //float2 textureCoordinateToUse = ((normCoord  / m + h) ) * dim;
-    float2 textureCoordinateToUse = ((normCoord + h) / m) * dim;
+    float2 textureCoordinateToUse = normCoord  / m + h;
 
-rsDebug("PolarPixellate: normCoord", textureCoordinateToUse.x, fabs(textureCoordinateToUse.y), phi);
+    //rsDebug("PolarPixellate: normCoord", textureCoordinateToUse.x, textureCoordinateToUse.y, phi);
+
+    textureCoordinateToUse *= dim;
+
     uchar4 *element;
-    element = (uchar4 *)rsGetElementAt(inTexture, textureCoordinateToUse.x, fabs(textureCoordinateToUse.y));
+
+    int xUse = textureCoordinateToUse.x;
+    int yUse = textureCoordinateToUse.y;
+
+    element = (uchar4 *)rsGetElementAt(inTexture, xUse, yUse);
     float4 color = rsUnpackColor8888(*element);
     *v_out = rsPackColorTo8888(color.r,color.g,color.b,color.a);
 }

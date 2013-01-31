@@ -20,9 +20,11 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.renderscript.Allocation;
+import android.renderscript.Float2;
 import android.renderscript.Float3;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptC;
+import com.caguilar.android.filters.scripts.EmbossFilter;
 import com.caguilar.android.filters.scripts.GaussianBlurFilter;
 import com.caguilar.android.filters.scripts.HalftoneFilter;
 import com.caguilar.android.filters.scripts.HueFilter;
@@ -36,8 +38,11 @@ import com.caguilar.android.filters.scripts.ScriptC_invertcolorfilter;
 import com.caguilar.android.filters.scripts.ScriptC_luminancethresholdfilter;
 import com.caguilar.android.filters.scripts.ScriptC_monochromefilter;
 import com.caguilar.android.filters.scripts.ScriptC_opacityfilter;
+import com.caguilar.android.filters.scripts.ScriptC_polarpixellate;
 import com.caguilar.android.filters.scripts.ScriptC_rgbfilter;
 import com.caguilar.android.filters.scripts.ScriptC_saturationfilter;
+import com.caguilar.android.filters.scripts.ScriptC_stretchdistortion;
+import com.caguilar.android.filters.scripts.ScriptC_swirl;
 import com.caguilar.android.filters.scripts.SelectiveGaussianBlurFilter;
 import com.caguilar.android.filters.scripts.SepiaFilter;
 import com.caguilar.android.filters.scripts.TiltShiftGaussianBlurFilter;
@@ -147,6 +152,35 @@ public class FilterSystem {
             ((TiltShiftGaussianBlurFilter)mScript).set_bottomFocusLevel(value+0.1f);
             ((TiltShiftGaussianBlurFilter)mScript).set_direction(0);
             ((TiltShiftGaussianBlurFilter)mScript).invoke_filter(mScript,mInAllocation, mOutAllocation);
+        }else if (effectName.equalsIgnoreCase("swirl")) {
+            mScript = new ScriptC_swirl(mRS, resources, R.raw.swirl);
+            ((ScriptC_swirl)mScript).set_angle(0.8f);
+            ((ScriptC_swirl)mScript).set_center(new Float2(originalBitmap.getWidth() / 2, originalBitmap.getHeight() / 2));
+            ((ScriptC_swirl)mScript).set_radius((originalBitmap.getWidth() - 10) / 2);
+            ((ScriptC_swirl)mScript).set_inTexture(mInAllocation);
+            ((ScriptC_swirl)mScript).invoke_filter(mScript, mInAllocation, mOutAllocation);
+
+        } else if (effectName.equalsIgnoreCase("stretchdistortion")) {
+            mScript = new ScriptC_stretchdistortion(mRS, resources, R.raw.stretchdistortion);
+            ((ScriptC_stretchdistortion)mScript).set_center(new Float2(originalBitmap.getWidth()/2, originalBitmap.getHeight()/2));
+            ((ScriptC_stretchdistortion)mScript).set_inTexture(mInAllocation);
+            ((ScriptC_stretchdistortion)mScript).set_dim(new Float2(originalBitmap.getWidth()-1, originalBitmap.getHeight()-1));
+            ((ScriptC_stretchdistortion)mScript).invoke_filter(mScript, mInAllocation, mOutAllocation);
+
+        } else if (effectName.equalsIgnoreCase("polarpixellate")) {
+//            value -= 1;
+            mScript = new ScriptC_polarpixellate(mRS, resources, R.raw.polarpixellate);
+            ((ScriptC_polarpixellate)mScript).set_center(new Float2(originalBitmap.getWidth()/2, originalBitmap.getHeight()/2));
+            ((ScriptC_polarpixellate)mScript).set_pixelSize(new Float2(value, value));
+            ((ScriptC_polarpixellate)mScript).set_dim(new Float2(originalBitmap.getWidth()-1, originalBitmap.getHeight()-1));
+            ((ScriptC_polarpixellate)mScript).set_inTexture(mInAllocation);
+            ((ScriptC_polarpixellate)mScript).invoke_filter(mScript, mInAllocation, mOutAllocation);
+        } else if (effectName.equalsIgnoreCase("emboss")) {
+            mScript = new EmbossFilter(mRS, resources, R.raw.convolutionfilter);
+            ((EmbossFilter)mScript).set_imageHeight(originalBitmap.getHeight()-1);
+            ((EmbossFilter)mScript).set_imageWidth(originalBitmap.getWidth()-1);
+            ((EmbossFilter)mScript).setIntensity(value);
+            ((EmbossFilter)mScript).invoke_filter(mScript,mInAllocation, mOutAllocation);
         }
     }
 }

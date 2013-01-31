@@ -11,8 +11,8 @@ import android.renderscript.Script;
  * Date: 1/23/13
  * Description:
  */
-public class EmbossFilter extends ScriptC_convolutionfilter {
-    float _intensity = 2.0f;
+public class EmbossFilter extends ScriptC_convolutionthreexthreefilter {
+    float _intensity = 1.0f;
     float kernel[];
     Allocation kernelAllocation;
 
@@ -27,25 +27,17 @@ public class EmbossFilter extends ScriptC_convolutionfilter {
         kernel = makeKernel();
     }
 
-    public EmbossFilter(RenderScript rs, Resources resources, int id, float value) {
-        super(rs, resources, id);
-        _intensity = value;
-        kernelAllocation = Allocation.createSized(rs, Element.F32(rs),9);
-        kernel = makeKernel();
-    }
-
     @Override
     public void invoke_filter(Script script,Allocation mInAllocation, Allocation mOutAllocation) {
         set_inTexture(mInAllocation);
         set_matrixTexture(kernelAllocation);
         super.invoke_filter(script, mInAllocation, mOutAllocation);
-        set_inTexture(mOutAllocation);
-        super.invoke_filter(script,mInAllocation, mOutAllocation);
     }
 
     public void setIntensity(float value) {
         _intensity = value;
         makeKernel();
+        set_matrixTexture(kernelAllocation);
     }
 
     public  float[] makeKernel(){
@@ -67,8 +59,11 @@ public class EmbossFilter extends ScriptC_convolutionfilter {
         int total = 0;
         for( int i = 0; i < 9; i++ )
             total += matrix[i];
-        set_kernelSum(total);
 
+
+        set_kernelSum(total);
+//        set_kernelHeight(3);
+//        set_kernelWidth(3);
         kernelAllocation.copyFrom(matrix);
         bind_convolutionKernel(kernelAllocation);
 
