@@ -43,9 +43,14 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
 
     int xUse = textureCoordinateToUse.x;
     int yUse = textureCoordinateToUse.y;
+    float4 color;
+    if((xUse>-1 && xUse<dim.x) && (yUse>-1 && yUse<dim.y) ){
+        element = (uchar4 *)rsGetElementAt(inTexture, xUse, yUse);
+        color = rsUnpackColor8888(*element);
+    }else{
+        color = rsUnpackColor8888(*v_in);
+    }
 
-    element = (uchar4 *)rsGetElementAt(inTexture, xUse, yUse);
-    float4 color = rsUnpackColor8888(*element);
     *v_out = rsPackColorTo8888(color.r,color.g,color.b,color.a);
 }
 

@@ -5,6 +5,7 @@
 // Scene buffer
 rs_allocation inTexture;
 
+float2 dim;
 
 // Swirl effect parameters
 float radius;
@@ -31,8 +32,15 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
     textureCoordinateToUse += center;
   }
   uchar4 *element;
-  element = (uchar4 *)rsGetElementAt(inTexture, textureCoordinateToUse.x, textureCoordinateToUse.y);
-  float4 color = rsUnpackColor8888(*element);
+  float4 color;
+  if((textureCoordinateToUse.x>-1 && textureCoordinateToUse.x<dim.x) && (textureCoordinateToUse.y>-1 && textureCoordinateToUse.y<dim.y) ){
+        element = (uchar4 *)rsGetElementAt(inTexture, textureCoordinateToUse.x, textureCoordinateToUse.y);
+        color = rsUnpackColor8888(*element);
+  }else{
+        color = rsUnpackColor8888(*v_in);
+  }
+
+  //float4 color = rsUnpackColor8888(*element);
   *v_out = rsPackColorTo8888(color.r,color.g,color.b,color.a);
 }
 
