@@ -48,10 +48,10 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
             newPosition = currentPosition+moveBy;
             position = (i+centerX)+((j+centerY)*kernelWidth);
             if((newPosition.x > -1 && newPosition.y >-1) && (newPosition.x < imageWidth && newPosition.y < imageHeight)){
-                element = (uchar4 *)rsGetElementAt(inTexture, newPosition.x, newPosition.y);
-                matrixValue = (float*)rsGetElementAt(matrixTexture,position);
-                color = rsUnpackColor8888(*element).rgb;
-                newColor += color*(*matrixValue);
+                //element = (uchar4 *)rsGetElementAt(inTexture, newPosition.x, newPosition.y);
+                //matrixValue = (float*)rsGetElementAt(matrixTexture,position);
+                //color = rsUnpackColor8888(*element).rgb;
+                //newColor += color*(*matrixValue);
             }
         }
     }

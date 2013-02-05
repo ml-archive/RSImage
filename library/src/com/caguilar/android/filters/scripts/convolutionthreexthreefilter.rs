@@ -18,14 +18,12 @@
 #pragma rs java_package_name(com.caguilar.android.filters.scripts)
 
 rs_allocation inTexture;
-rs_allocation matrixTexture;
 
 float* convolutionKernel;
-float  kernelSum;
 uint32_t imageWidth;
 uint32_t imageHeight;
 
-static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel, float sum );
+static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel);
 
 void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, uint32_t y) {
     float4 apixel = rsUnpackColor8888(*v_in);
@@ -43,7 +41,7 @@ void root(const uchar4 *v_in, uchar4 *v_out,const void *userData, uint32_t x, ui
                                  *(uchar4* )rsGetElementAt(inTexture, x+1, y+1)
                                };
         
-        *v_out = convolve_3x3k( neighborhood, convolutionKernel, kernelSum );
+        *v_out = convolve_3x3k( neighborhood, convolutionKernel );
        
     }
     else
@@ -54,26 +52,19 @@ void filter(rs_script script,rs_allocation inAllocation,rs_allocation outAllocat
     rsForEach(script, inAllocation, outAllocation, 0, 0);
 }
 
-static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel, float sum )
+static uchar4 convolve_3x3k( const uchar4* neighborhood, const float* kernel )
 {
     float4 total = {0.0f,0.0f,0.0f,0.0f};
 
     float alpha = rsUnpackColor8888(*(neighborhood+4)).a;
 
-    float4 s = { sum, sum, sum, 1};
     for(int i = 0; i < 9; i++ )
     {
         float4 c = rsUnpackColor8888(*(neighborhood+i));
-        float4 k = {*(kernel+i),*(kernel+i),*(kernel+i),1};
-
         total.rgb += (*(kernel+i)*c).rgb;
-        //total.rgb += (k*c).rgb;
-
     }
 
-    float4 newValue = total;
-
-    newValue = clamp(newValue,0.0f,1.0f);
+    float4 newValue = clamp(total,0.0f,1.0f);
 
     return rsPackColorTo8888( newValue.r, newValue.g, newValue.b, alpha );
 }

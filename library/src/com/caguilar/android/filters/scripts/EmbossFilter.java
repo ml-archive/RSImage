@@ -30,14 +30,12 @@ public class EmbossFilter extends ScriptC_convolutionthreexthreefilter {
     @Override
     public void invoke_filter(Script script,Allocation mInAllocation, Allocation mOutAllocation) {
         set_inTexture(mInAllocation);
-        set_matrixTexture(kernelAllocation);
         super.invoke_filter(script, mInAllocation, mOutAllocation);
     }
 
     public void setIntensity(float value) {
         _intensity = value;
         makeKernel();
-        set_matrixTexture(kernelAllocation);
     }
 
     public  float[] makeKernel(){
@@ -60,10 +58,6 @@ public class EmbossFilter extends ScriptC_convolutionthreexthreefilter {
         for( int i = 0; i < 9; i++ )
             total += matrix[i];
 
-
-        set_kernelSum(total);
-//        set_kernelHeight(3);
-//        set_kernelWidth(3);
         kernelAllocation.copyFrom(matrix);
         bind_convolutionKernel(kernelAllocation);
 
